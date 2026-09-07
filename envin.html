@@ -218,7 +218,7 @@
       <h2 class="side-title">Filtros</h2>
       <div class="filt-top">
         <label class="f">Búsqueda
-          <input id="q" placeholder="NHC, iniciales, germen, tratamiento…" />
+          <input id="q" placeholder="Estancia, germen, tratamiento…" />
         </label>
         <div class="actions">
           <button class="btn" type="button" id="btn-reset">Limpiar</button>
@@ -429,6 +429,7 @@
   </div>
 
   <script src="envin-data.js"></script>
+  <script src="envin-data.local.js"></script>
   <script>
     (function () {
       var E = window.ENVIN;
@@ -439,6 +440,23 @@
       }
 
       var cat = E.cat;
+      var phi = !E.meta.anon;
+      if (phi) document.getElementById("q").placeholder = "NHC, iniciales, germen, tratamiento…";
+      else {
+        var expBox = document.getElementById("exp-anon");
+        expBox.checked = true;
+        expBox.disabled = true;
+        expBox.parentNode.querySelector("span").textContent = "Datos sin NHC ni nombre (ya anonimizados)";
+      }
+      function stayCode(p) {
+        var id = p && p.nhc != null && p.nhc !== "" ? String(p.nhc) : "";
+        if (!id) return "—";
+        return phi ? id : ("E-" + id);
+      }
+      function pacName(p) {
+        if (phi && p.ini) return p.ini;
+        return "—";
+      }
       var stayKey = function (nhc, f0) { return String(nhc || "").trim() + "|" + (f0 || ""); };
       var ingresosByStay = {};
       E.ingresos.forEach(function (p) {
@@ -975,8 +993,8 @@
           var p = row._p || {};
           return {
             fecha: String(row.fi || row.f0 || ""),
-            nhc: String(row.nhc || ""),
-            pac: ((p.ini || "") + " " + (p.ed != null ? p.ed : "")).trim(),
+            nhc: stayCode(p),
+            pac: ((pacName(p) !== "—" ? pacName(p) + " " : "") + (p.ed != null ? p.ed : "")).trim(),
             inf: nameInf(row.inf),
             micro: microsTxt(row.ms),
             tto: atbTxt(row.nhc, row.f0),
@@ -987,8 +1005,8 @@
         }
         return {
           fecha: String(row.f0 || ""),
-          nhc: String(row.nhc || ""),
-          pac: ((row.ini || "") + " " + (row.ed != null ? row.ed : "")).trim(),
+          nhc: stayCode(row),
+          pac: ((pacName(row) !== "—" ? pacName(row) + " " : "") + (row.ed != null ? row.ed : "")).trim(),
           inf: nameDx(row.dx),
           tto: atbTxt(row.nhc, row.f0),
           apache: (row.ap != null ? String(row.ap) : "") + " " + (row.sa != null ? String(row.sa) : ""),
@@ -1023,11 +1041,11 @@
           thead.dataset.view = view;
           if (view === "inf") {
             thead.innerHTML =
-              "<tr><th>Fecha</th><th>NHC</th><th>Paciente</th><th>Infección</th><th>Microorganismos</th><th>Tratamientos</th><th>Origen</th><th>APACHE</th><th>Alta</th><th></th></tr>" +
+              "<tr><th>Fecha</th><th>" + (phi ? "NHC" : "Estancia") + "</th><th>Paciente</th><th>Infección</th><th>Microorganismos</th><th>Tratamientos</th><th>Origen</th><th>APACHE</th><th>Alta</th><th></th></tr>" +
               '<tr class="filt-row"><th>' + colInput("fecha") + "</th><th>" + colInput("nhc") + "</th><th>" + colInput("pac") + "</th><th>" + colInput("inf") + "</th><th>" + colInput("micro") + "</th><th>" + colInput("tto") + "</th><th>" + colInput("orig") + "</th><th>" + colInput("apache") + "</th><th>" + colInput("alta") + "</th><th></th></tr>";
           } else {
             thead.innerHTML =
-              "<tr><th>Ingreso</th><th>NHC</th><th>Paciente</th><th>Diagnóstico</th><th>Tratamientos</th><th>APACHE / SAPS</th><th>VM</th><th>COVID</th><th>Inmunod.</th><th>Alta</th><th></th></tr>" +
+              "<tr><th>Ingreso</th><th>" + (phi ? "NHC" : "Estancia") + "</th><th>Paciente</th><th>Diagnóstico</th><th>Tratamientos</th><th>APACHE / SAPS</th><th>VM</th><th>COVID</th><th>Inmunod.</th><th>Alta</th><th></th></tr>" +
               '<tr class="filt-row"><th>' + colInput("fecha") + "</th><th>" + colInput("nhc") + "</th><th>" + colInput("pac") + "</th><th>" + colInput("inf") + "</th><th>" + colInput("tto") + "</th><th>" + colInput("apache") + "</th><th>" + colInput("vm") + "</th><th>" + colInput("covid") + "</th><th>" + colInput("inmuno") + "</th><th>" + colInput("alta") + "</th><th></th></tr>";
           }
         }
@@ -1040,8 +1058,8 @@
             var p = inf._p || {};
             return "<tr data-kind='inf' data-i='" + it.i + "'>" +
               "<td>" + (inf.fi || inf.f0 || "—") + "</td>" +
-              "<td>" + inf.nhc + "</td>" +
-              "<td>" + (p.ini || "—") + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + (p.sx === 1 ? " · H" : p.sx === 2 ? " · M" : "") + "</div></td>" +
+              "<td>" + stayCode(p) + "</td>" +
+              "<td>" + pacName(p) + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + (p.sx === 1 ? " · H" : p.sx === 2 ? " · M" : "") + "</div></td>" +
               "<td>" + nameInf(inf.inf) + "</td>" +
               "<td>" + microsTxt(inf.ms) + "</td>" +
               "<td class='tto'>" + atbTxt(inf.nhc, inf.f0) + "</td>" +
@@ -1055,8 +1073,8 @@
             var p = it.row;
             return "<tr data-kind='ing' data-i='" + it.i + "'>" +
               "<td>" + (p.f0 || "—") + (p.f1 ? "<div class='muted'>alta " + p.f1 + "</div>" : "") + "</td>" +
-              "<td>" + p.nhc + "</td>" +
-              "<td>" + (p.ini || "—") + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + "</div></td>" +
+              "<td>" + stayCode(p) + "</td>" +
+              "<td>" + pacName(p) + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + "</div></td>" +
               "<td>" + nameDx(p.dx) + "</td>" +
               "<td class='tto'>" + atbTxt(p.nhc, p.f0) + "</td>" +
               "<td>" + (p.ap != null ? p.ap : "—") + " / " + (p.sa != null ? p.sa : "—") + "</td>" +
@@ -1187,7 +1205,7 @@
         var k = stayKey(p.nhc, p.f0);
         var infs = infByStay[k] || [];
         var atbs = atbByStay[k] || [];
-        var html = "<h3>" + (p.ini || "Paciente") + " · NHC " + p.nhc + "</h3>" +
+        var html = "<h3>" + (phi && p.ini ? p.ini + " · NHC " + p.nhc : "Estancia " + p.nhc) + "</h3>" +
           "<p class='muted'>Ingreso UCI " + (p.f0 || "—") + (p.f1 ? " → alta " + p.f1 : "") + " · " + tagEx(p.ex) + "</p>" +
           "<div class='kv'>" +
           "<b>Edad / sexo</b><span>" + (p.ed != null ? p.ed : "—") + " años · " + (cat.sexo[p.sx] || "—") + "</span>" +
@@ -1394,7 +1412,7 @@
         return map;
       }
       function buildExport() {
-        var anon = document.getElementById("exp-anon").checked;
+        var anon = !phi || document.getElementById("exp-anon").checked;
         var rows = filterByCols(currentRows).map(function (x) { return x.row; });
         var ids = stayIdMap(rows);
         var headers, body, sheet, base;

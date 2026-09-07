@@ -1,7 +1,8 @@
-# Extrae ENVIN-PAZ a envin-data.js (UTF-8) para el explorador local.
+# Extrae ENVIN-PAZ a envin-data.local.js (con NHC/iniciales, no se sube)
+# y genera envin-data.js anonimizado para GitHub.
 $ErrorActionPreference = "Stop"
 $src = "C:\Users\jroda\Downloads\ENVINPAZ.accdb"
-$out = Join-Path $PSScriptRoot "envin-data.js"
+$out = Join-Path $PSScriptRoot "envin-data.local.js"
 
 function Esc([string]$s) {
   if ($null -eq $s) { return "" }
@@ -307,4 +308,7 @@ $sw.Write(($atbs -join ","))
 $sw.Write("]")
 $sw.Write("};")
 $sw.Close()
-Write-Host ("OK " + ((Get-Item $out).Length / 1MB).ToString("0.00") + " MB")
+Write-Host ("OK local " + ((Get-Item $out).Length / 1MB).ToString("0.00") + " MB")
+Write-Host "Anonimizando (sin NHC ni iniciales)..."
+& node (Join-Path $PSScriptRoot "anonymize-envin.js")
+if ($LASTEXITCODE -ne 0) { throw "Falló anonymize-envin.js" }
