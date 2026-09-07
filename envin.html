@@ -26,17 +26,16 @@
       background: var(--blanco); border-bottom: 1px solid var(--borde);
     }
     header h1 { margin: 0; font-size: 1.2rem; color: var(--az); font-weight: 700; }
-    header p { margin: 4px 0 0; color: var(--gris); font-size: 0.88rem; }
     .shell {
       flex: 1; min-height: 0;
       display: grid; grid-template-columns: 340px minmax(0, 1fr);
     }
     .sidebar {
-      background: #e8eef5; border-right: 1px solid var(--borde);
+      background: #2b3a4d; border-right: 1px solid #1f2a38;
       overflow: auto; padding: 12px; min-height: 0;
     }
     .side-title {
-      margin: 0 0 10px; font-size: 0.72rem; font-weight: 800; color: #334155;
+      margin: 0 0 10px; font-size: 0.72rem; font-weight: 800; color: #e2e8f0;
       text-transform: uppercase; letter-spacing: 0.08em;
     }
     .main {
@@ -61,7 +60,7 @@
     .filt-top {
       display: grid; gap: 8px; margin-bottom: 10px;
       background: var(--blanco); border: 1px solid var(--borde); border-radius: 14px;
-      padding: 12px; position: sticky; top: 0; z-index: 4;
+      padding: 12px;
       box-shadow: 0 1px 2px rgba(15,23,42,.06);
     }
     .filt-secs { display: grid; gap: 10px; }
@@ -95,7 +94,7 @@
       .app { height: auto; }
       .shell { grid-template-columns: 1fr; }
       .sidebar {
-        border-right: none; border-bottom: 1px solid var(--borde);
+        border-right: none; border-bottom: 1px solid #1f2a38;
         max-height: 42vh;
       }
     }
@@ -209,7 +208,6 @@
     <header class="app-header">
       <div>
         <h1>ENVIN-UCI · Explorador microbiológico</h1>
-        <p>Infecciones, microorganismos, tratamientos, gravedad y evolución en UCI</p>
       </div>
     </header>
 
