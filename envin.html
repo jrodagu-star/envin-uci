@@ -349,7 +349,17 @@
 
         <section class="filt-sec" data-tone="exp">
           <h3>Exportación de datos</h3>
-          <div>
+          <div id="exp-lock">
+            <p class="hint">La descarga de CSV y Excel está restringida. Introduce la clave que te hayan facilitado.</p>
+            <label class="f">Clave de descarga
+              <input id="exp-clave" type="password" autocomplete="off" />
+            </label>
+            <div class="actions">
+              <button class="btn" type="button" id="btn-exp-unlock">Desbloquear</button>
+            </div>
+            <p class="hint" id="exp-lock-msg" hidden style="color:var(--rojo);margin-top:8px;">Clave incorrecta.</p>
+          </div>
+          <div id="exp-panel" hidden>
             <label class="check">
               <input type="checkbox" id="exp-anon" checked />
               <span>Eliminar NHC y nombre</span>
@@ -439,6 +449,21 @@
 
       var cat = E.cat;
       var phi = !E.meta.anon;
+      var EXPORT_HASH = "f9a3eb433c327630959e59f3fb56252e853524e1378725a52d521fd63c7f3a8d";
+      function isLocalHost() {
+        var h = location.hostname;
+        return h === "localhost" || h === "127.0.0.1" || location.protocol === "file:";
+      }
+      function exportOpen() {
+        document.getElementById("exp-lock").hidden = true;
+        document.getElementById("exp-panel").hidden = false;
+      }
+      function exportLocked() {
+        document.getElementById("exp-lock").hidden = false;
+        document.getElementById("exp-panel").hidden = true;
+      }
+      if (isLocalHost() || sessionStorage.getItem("envin-export-ok") === "1") exportOpen();
+      else exportLocked();
       if (phi) document.getElementById("q").placeholder = "NHC, iniciales, germen, tratamiento…";
       else {
         var expBox = document.getElementById("exp-anon");
@@ -1527,11 +1552,41 @@
           { name: "xl/worksheets/sheet1.xml", data: sheetXml }
         ]);
       }
+      document.getElementById("btn-exp-unlock").addEventListener("click", function () {
+        var clave = document.getElementById("exp-clave").value || "";
+        var msg = document.getElementById("exp-lock-msg");
+        msg.hidden = true;
+        if (!window.crypto || !crypto.subtle) {
+          msg.textContent = "Este navegador no permite comprobar la clave.";
+          msg.hidden = false;
+          return;
+        }
+        crypto.subtle.digest("SHA-256", new TextEncoder().encode(clave)).then(function (buf) {
+          var hex = Array.prototype.map.call(new Uint8Array(buf), function (b) {
+            return ("0" + b.toString(16)).slice(-2);
+          }).join("");
+          if (hex === EXPORT_HASH) {
+            sessionStorage.setItem("envin-export-ok", "1");
+            exportOpen();
+          } else {
+            msg.textContent = "Clave incorrecta.";
+            msg.hidden = false;
+          }
+        });
+      });
+      document.getElementById("exp-clave").addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          document.getElementById("btn-exp-unlock").click();
+        }
+      });
       document.getElementById("btn-csv").addEventListener("click", function () {
+        if (document.getElementById("exp-panel").hidden) return;
         var exp = buildExport();
         downloadBlob(toCsv(exp), exp.base + ".csv");
       });
       document.getElementById("btn-xlsx").addEventListener("click", function () {
+        if (document.getElementById("exp-panel").hidden) return;
         var exp = buildExport();
         downloadBlob(toXlsx(exp), exp.base + ".xlsx");
       });
