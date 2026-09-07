@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ENVIN-UCI · Explorador microbiológico</title>
+  <style>
+    :root {
+      --az: #0e6ba8; --az-osc: #0a4f7c; --texto: #1f2933; --gris: #6b7280;
+      --gris-claro: #9ca3af; --borde: #d4dbe3; --bg: #f3f6fb;
+      --blanco: #fff; --verde: #059669; --ambar: #d97706; --rojo: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; background: var(--bg); color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    body { font-size: 14px; }
+    .app { max-width: 1440px; margin: 0 auto; padding: 14px; }
+    header.app-header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding: 4px 4px 12px; }
+    header h1 { margin: 0; font-size: 1.35rem; color: var(--az); font-weight: 700; }
+    header p { margin: 4px 0 0; color: var(--gris); font-size: 0.95rem; }
+    .priv {
+      font-size: 0.72rem; color: #92400e; background: #fff7ed; border: 1px solid #f59e0b;
+      border-radius: 8px; padding: 6px 10px; max-width: 360px;
+    }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab, button, select, input {
+      font-family: inherit; font-size: 0.82rem;
+    }
+    .tab {
+      border: 1px solid var(--borde); background: var(--blanco); color: var(--texto);
+      border-radius: 999px; padding: 6px 12px; font-weight: 700; cursor: pointer;
+    }
+    .tab.active { background: var(--az); color: #fff; border-color: var(--az); }
+    .filters {
+      background: var(--blanco); border: 1px solid var(--borde); border-radius: 12px;
+      padding: 12px; display: grid; gap: 8px;
+      grid-template-columns: 1.6fr repeat(6, 1fr);
+    }
+    @media (max-width: 1100px) { .filters { grid-template-columns: 1fr 1fr 1fr; } }
+    label.f { display: flex; flex-direction: column; gap: 3px; font-size: 0.68rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: 0.04em; }
+    label.f input, label.f select {
+      border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px;
+      background: var(--blanco); color: var(--texto); outline: none;
+    }
+    label.f input:focus, label.f select:focus { border-color: var(--az); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+    .chip {
+      border: 1px solid var(--borde); background: var(--blanco); border-radius: 999px;
+      padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--texto);
+    }
+    .chip.on { background: var(--az); color: #fff; border-color: var(--az); }
+    .actions { display: flex; gap: 8px; align-items: end; }
+    .btn {
+      border: 1px solid var(--borde); background: var(--blanco); border-radius: 8px;
+      padding: 7px 12px; font-weight: 700; cursor: pointer; color: var(--texto);
+    }
+    .btn.primary { background: var(--az); color: #fff; border-color: var(--az); }
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 12px 0; }
+    @media (max-width: 800px) { .kpis { grid-template-columns: 1fr 1fr; } }
+    .kpi {
+      background: var(--blanco); border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px;
+    }
+    .kpi .n { font-size: 1.45rem; font-weight: 800; color: var(--az); font-variant-numeric: tabular-nums; }
+    .kpi .l { font-size: 0.72rem; color: var(--gris); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+    .panel {
+      background: var(--blanco); border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px;
+    }
+    .panel h2 { margin: 0 0 8px; font-size: 0.95rem; color: var(--az); font-weight: 700; }
+    .bar-row { display: grid; grid-template-columns: 140px 1fr 42px; gap: 8px; align-items: center; margin: 4px 0; font-size: 0.78rem; }
+    .bar-row[data-micro] { cursor: pointer; border-radius: 6px; padding: 2px 4px; }
+    .bar-row[data-micro]:hover { background: #f0f7fc; }
+    .bar-row[data-micro].picked { background: #e8f3fb; }
+    .bar-row[data-micro].picked .bar-lab { color: var(--az); font-weight: 800; }
+    .bar-lab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #374151; }
+    .bar-track { height: 10px; background: #e5e7eb; border-radius: 6px; overflow: hidden; }
+    .bar-fill { height: 10px; background: var(--az); }
+    .bar-n { text-align: right; font-variant-numeric: tabular-nums; color: var(--gris); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gris); border-bottom: 1px solid var(--borde); padding: 6px 8px; }
+    td { border-bottom: 1px solid #eef2f6; padding: 7px 8px; vertical-align: top; }
+    td.tto { max-width: 220px; font-size: 0.75rem; color: #374151; }
+    tr:hover td { background: #f8fbff; cursor: pointer; }
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+    .tag.dead { background: #fee2e2; color: #991b1b; }
+    .tag.alive { background: #d1fae5; color: #065f46; }
+    .tag.uci { background: #dbeafe; color: #1e40af; }
+    .tag.com { background: #fef3c7; color: #92400e; }
+    .tag.ext { background: #ede9fe; color: #5b21b6; }
+    .pager { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 8px; color: var(--gris); font-size: 0.78rem; }
+    .drawer-bg { position: fixed; inset: 0; background: rgba(15,23,42,.35); display: none; z-index: 20; }
+    .drawer-bg.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 100%);
+      background: var(--blanco); border-left: 1px solid var(--borde); overflow: auto;
+      padding: 16px; z-index: 21;
+    }
+    .drawer h3 { margin: 0 0 6px; color: var(--az); }
+    .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 8px; font-size: 0.82rem; margin: 10px 0; }
+    .kv b { color: var(--gris); font-weight: 600; }
+    .muted { color: var(--gris); font-size: 0.78rem; }
+    .micro-list { margin: 0; padding-left: 16px; }
+    #estado { font-size: 0.72rem; color: var(--ambar); font-weight: 700; }
+    #estado.ok { color: var(--verde); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <h1>ENVIN-UCI · Explorador microbiológico</h1>
+        <p>Infecciones, microorganismos, tratamientos, gravedad y evolución en UCI</p>
+        <div id="estado">Cargando datos…</div>
+      </div>
+      <div class="priv">Datos clínicos locales extraídos de ENVINPAZ.accdb. No publicar ni subir a internet: contienen NHC e iniciales.</div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-view="inf" type="button">Infecciones</button>
+      <button class="tab" data-view="ing" type="button">Ingresos UCI</button>
+    </div>
+
+    <div class="filters" id="filters">
+      <label class="f" style="grid-column: span 2;">Búsqueda
+        <input id="q" placeholder="NHC, iniciales, germen, tratamiento, diagnóstico…" />
+      </label>
+      <label class="f">Año desde
+        <select id="y0"></select>
+      </label>
+      <label class="f">Año hasta
+        <select id="y1"></select>
+      </label>
+      <label class="f">Tipo de infección
+        <select id="infec"></select>
+      </label>
+      <label class="f">Microorganismo
+        <select id="tipoGer">
+          <option value="">Todos</option>
+          <option value="bac">Bacterianas</option>
+          <option value="vir">Víricas</option>
+          <option value="otr">Otras (hongos, parásitos…)</option>
+        </select>
+        <input id="micro" list="dl-micro" placeholder="Nombre o código" />
+        <datalist id="dl-micro"></datalist>
+      </label>
+      <label class="f">Tratamiento
+        <input id="atb" list="dl-atb" placeholder="Antibiótico o antiviral" />
+        <datalist id="dl-atb"></datalist>
+      </label>
+      <label class="f">Grupo
+        <select id="grupo"></select>
+      </label>
+      <label class="f">Tinción / tipo
+        <select id="gram"></select>
+      </label>
+      <label class="f">Origen infección
+        <select id="orig"></select>
+      </label>
+      <label class="f">APACHE ≥
+        <select id="apache">
+          <option value="">Cualquiera</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+          <option value="25">25</option>
+          <option value="30">30</option>
+        </select>
+      </label>
+      <label class="f">Gravedad / alta
+        <select id="exitus">
+          <option value="">Todos</option>
+          <option value="1">Fallecidos en UCI</option>
+          <option value="2">Vivos al alta</option>
+        </select>
+      </label>
+      <label class="f">Sexo
+        <select id="sexo">
+          <option value="">Todos</option>
+          <option value="1">Hombre</option>
+          <option value="2">Mujer</option>
+        </select>
+      </label>
+      <label class="f">COVID-19
+        <select id="covid">
+          <option value="">Todos</option>
+          <option value="1">Sí</option>
+          <option value="0">No</option>
+        </select>
+      </label>
+      <label class="f">Inmunodeprimido
+        <select id="inmuno">
+          <option value="">Todos</option>
+          <option value="1">Sí</option>
+          <option value="0">No</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button class="btn" type="button" id="btn-reset">Limpiar</button>
+        <button class="btn primary" type="button" id="btn-csv">CSV filtrado</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="n" id="k-n">—</div><div class="l" id="k-n-l">Registros</div></div>
+      <div class="kpi"><div class="n" id="k-ing">—</div><div class="l">Ingresos distintos</div></div>
+      <div class="kpi"><div class="n" id="k-mort">—</div><div class="l">Mortalidad UCI</div></div>
+      <div class="kpi"><div class="n" id="k-ap">—</div><div class="l">APACHE medio</div></div>
+      <div class="kpi"><div class="n" id="k-top">—</div><div class="l" id="k-top-l">Germen más frecuente</div></div>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <h2 id="chart-year-title">Infecciones por año (filtro actual)</h2>
+        <div id="chart-year"></div>
+      </div>
+      <div class="panel">
+        <h2>Microorganismos más frecuentes</h2>
+        <label class="f" style="margin-bottom:8px;">Elegir microorganismo
+          <select id="pick-micro">
+            <option value="">Todos en este ranking</option>
+          </select>
+        </label>
+        <div id="chart-micro"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:12px;">
+      <h2>Tratamientos más utilizados</h2>
+      <div id="chart-atb"></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px; overflow:auto;">
+      <h2 id="table-title">Resultados</h2>
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="pager">
+        <span id="page-info"></span>
+        <div>
+          <button class="btn" type="button" id="prev">Anterior</button>
+          <button class="btn" type="button" id="next">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-bg" id="drawer-bg">
+    <aside class="drawer" id="drawer"></aside>
+  </div>
+
+  <script src="envin-data.js"></script>
+  <script>
+    (function () {
+      var E = window.ENVIN;
+      var estado = document.getElementById("estado");
+      if (!E) { estado.textContent = "No se ha cargado envin-data.js. Ejecuta export-envin.ps1."; return; }
+      estado.textContent = E.meta.ingresos + " ingresos · " + E.meta.infecciones + " infecciones · " + E.meta.periodo[0] + "–" + E.meta.periodo[1];
+      estado.className = "ok";
+
+      var cat = E.cat;
+      var stayKey = function (nhc, f0) { return String(nhc || "").trim() + "|" + (f0 || ""); };
+      var ingresosByStay = {};
+      E.ingresos.forEach(function (p) {
+        p.ini = (p.ini || "").trim();
+        p.nhc = String(p.nhc || "").trim();
+        ingresosByStay[stayKey(p.nhc, p.f0)] = p;
+      });
+      E.infecciones.forEach(function (inf) {
+        inf.nhc = String(inf.nhc || "").trim();
+        inf._p = ingresosByStay[stayKey(inf.nhc, inf.f0)] || null;
+      });
+      var atbByStay = {};
+      E.atb.forEach(function (a) {
+        var k = stayKey(a.nhc, a.f0);
+        if (!atbByStay[k]) atbByStay[k] = [];
+        atbByStay[k].push(a);
+      });
+      var infByStay = {};
+      E.infecciones.forEach(function (inf) {
+        var k = stayKey(inf.nhc, inf.f0);
+        if (!infByStay[k]) infByStay[k] = [];
+        infByStay[k].push(inf);
+      });
+
+      function nameInf(c) { return cat.infec[c] || ("Código " + c); }
+      function nameMicro(c) { return (cat.micro[c] && cat.micro[c].n) || ("Germen " + c); }
+      function nameDx(c) { return cat.dx[c] || (c == null ? "—" : ("Dx " + c)); }
+      function nameAtb(c) { return cat.atb[c] || ("ATB " + c); }
+      function gramsOf(ms) {
+        return (ms || []).map(function (x) { return cat.micro[x.m] && cat.micro[x.m].gram; });
+      }
+      function gruposOf(ms) {
+        return (ms || []).map(function (x) { return cat.micro[x.m] && cat.micro[x.m].g; });
+      }
+      function microsTxt(ms) {
+        if (!ms || !ms.length) return "Sin aislamiento";
+        return ms.map(function (x) { return nameMicro(x.m); }).join(", ");
+      }
+      function stayAtbs(nhc, f0) {
+        return atbByStay[stayKey(nhc, f0)] || [];
+      }
+      function atbNames(nhc, f0) {
+        var seen = {}, names = [];
+        stayAtbs(nhc, f0).forEach(function (a) {
+          var n = nameAtb(a.atb);
+          if (!seen[n]) { seen[n] = 1; names.push(n); }
+        });
+        return names;
+      }
+      function atbTxt(nhc, f0) {
+        var names = atbNames(nhc, f0);
+        return names.length ? names.join(", ") : "Sin ATB";
+      }
+      function matchesAtb(nhc, f0, qAtb) {
+        if (!qAtb) return true;
+        var q = qAtb.trim().toLowerCase();
+        if (!q) return true;
+        return stayAtbs(nhc, f0).some(function (a) {
+          var n = (nameAtb(a.atb) || "").toLowerCase();
+          return n.indexOf(q) !== -1 || String(a.atb) === q;
+        });
+      }
+
+      var years = [];
+      for (var y = E.meta.periodo[0]; y <= E.meta.periodo[1]; y++) years.push(y);
+      function fillSelect(id, opts, first) {
+        var el = document.getElementById(id);
+        el.innerHTML = "";
+        var o0 = document.createElement("option"); o0.value = ""; o0.textContent = first; el.appendChild(o0);
+        opts.forEach(function (o) {
+          var op = document.createElement("option");
+          op.value = o.v; op.textContent = o.t; el.appendChild(op);
+        });
+      }
+      fillSelect("y0", years.map(function (y) { return { v: y, t: y }; }), "Inicio");
+      fillSelect("y1", years.map(function (y) { return { v: y, t: y }; }), "Fin");
+      document.getElementById("y0").value = String(E.meta.periodo[0]);
+      document.getElementById("y1").value = String(E.meta.periodo[1]);
+
+      var infecOpts = Object.keys(cat.infec).filter(function (k) { return k !== "0"; }).sort(function (a, b) { return Number(a) - Number(b); })
+        .map(function (k) { return { v: k, t: k + " · " + cat.infec[k] }; });
+      fillSelect("infec", infecOpts, "Todas");
+      fillSelect("grupo", Object.keys(cat.grupos).sort().map(function (k) { return { v: k, t: cat.grupos[k] }; }), "Todos");
+      fillSelect("gram", Object.keys(cat.gram).map(function (k) { return { v: k, t: cat.gram[k] }; }), "Todos");
+      fillSelect("orig", Object.keys(cat.origInf).map(function (k) { return { v: k, t: cat.origInf[k] }; }), "Todos");
+
+      function fillMicroDl() {
+        var tipo = val("tipoGer");
+        var dl = document.getElementById("dl-micro");
+        dl.innerHTML = "";
+        Object.keys(cat.micro).filter(function (k) {
+          return !tipo || tipoDeGermen(cat.micro[k].gram) === tipo;
+        }).sort(function (a, b) { return cat.micro[a].n.localeCompare(cat.micro[b].n, "es"); }).forEach(function (k) {
+          var op = document.createElement("option");
+          op.value = cat.micro[k].n;
+          dl.appendChild(op);
+        });
+      }
+      fillMicroDl();
+      var dlAtb = document.getElementById("dl-atb");
+      Object.keys(cat.atb).sort(function (a, b) { return cat.atb[a].localeCompare(cat.atb[b], "es"); }).forEach(function (k) {
+        var op = document.createElement("option");
+        op.value = cat.atb[k];
+        dlAtb.appendChild(op);
+      });
+
+      var chips = [
+        { id: "nav", t: "NAV (VM)", infec: "1" },
+        { id: "np", t: "Neumonía no VM", infec: "12" },
+        { id: "tav", t: "TAV", infec: "36" },
+        { id: "itu", t: "ITU-sonda", infec: "2" },
+        { id: "bfd", t: "Bacteriemia FD", infec: "3" },
+        { id: "bsc", t: "Bacteriemia catéter", infec: "4" },
+        { id: "eco", t: "E. coli", micro: "Escherichia coli" },
+        { id: "kpn", t: "K. pneumoniae", micro: "Klebsiella pneumoniae" },
+        { id: "pae", t: "P. aeruginosa", micro: "Pseudomonas aeruginosa" },
+        { id: "sau", t: "S. aureus", micro: "Staphylococcus aureus" },
+        { id: "cov", t: "SARS-CoV-2", micro: "SARS-CoV-2" },
+        { id: "bac", t: "Bacterianas", tipoGer: "bac" },
+        { id: "vir", t: "Víricas", tipoGer: "vir" },
+        { id: "otr", t: "Otras", tipoGer: "otr" },
+        { id: "mero", t: "Meropenem", atb: "Meropenem" },
+        { id: "lzd", t: "Linezolid", atb: "Linezolid" },
+        { id: "amc", t: "Amoxi-clav", atb: "Amoxicilina-Clavulánico" },
+        { id: "taz", t: "Pip-tazo", atb: "Piperacilina-Tazobactam" },
+        { id: "van", t: "Vancomicina", atb: "Vancomicina" },
+        { id: "imsi", t: "Inmunodeprimidos", inmuno: "1" },
+        { id: "imno", t: "No inmunodeprimidos", inmuno: "0" }
+      ];
+      var chipBox = document.getElementById("chips");
+      chips.forEach(function (c) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip"; b.dataset.id = c.id; b.textContent = c.t;
+        b.addEventListener("click", function () {
+          document.getElementById("infec").value = c.infec || "";
+          document.getElementById("micro").value = c.micro || "";
+          document.getElementById("atb").value = c.atb || "";
+          document.getElementById("tipoGer").value = c.tipoGer || "";
+          document.getElementById("inmuno").value = c.inmuno || "";
+          fillMicroDl();
+          document.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+          b.classList.add("on");
+          page = 0; apply();
+        });
+        chipBox.appendChild(b);
+      });
+
+      var view = "inf";
+      var page = 0;
+      var pageSize = 40;
+      var currentRows = [];
+
+      function val(id) { return document.getElementById(id).value; }
+      function tipoDeGermen(gram) {
+        var g = String(gram || "").toUpperCase();
+        if (g === "N" || g === "P") return "bac";
+        if (g === "V") return "vir";
+        return "otr";
+      }
+      function matchesMicroFilter(ms, qMicro, grupo, gram, tipoGer) {
+        if (!qMicro && !grupo && !gram && !tipoGer) return true;
+        var list = ms || [];
+        if (!list.length) return false;
+        var q = (qMicro || "").trim().toLowerCase();
+        return list.some(function (x) {
+          var m = cat.micro[x.m];
+          if (tipoGer && tipoDeGermen(m && m.gram) !== tipoGer) return false;
+          if (grupo && (!m || m.g !== grupo)) return false;
+          if (gram && (!m || m.gram !== gram)) return false;
+          if (q) {
+            var nom = (m && m.n || "").toLowerCase();
+            if (nom.indexOf(q) === -1 && String(x.m) !== q) return false;
+          }
+          return true;
+        });
+      }
+
+      function filterInfecciones(opts) {
+        opts = opts || {};
+        var q = val("q").trim().toLowerCase();
+        var y0 = Number(val("y0") || E.meta.periodo[0]);
+        var y1 = Number(val("y1") || E.meta.periodo[1]);
+        var infec = val("infec");
+        var micro = opts.skipMicro ? "" : val("micro");
+        var tipoGer = val("tipoGer");
+        var grupo = val("grupo");
+        var gram = val("gram");
+        var orig = val("orig");
+        var atb = val("atb");
+        var apMin = Number(val("apache") || 0);
+        var ex = val("exitus");
+        var sx = val("sexo");
+        var cov = val("covid");
+        var inmuno = val("inmuno");
+        return E.infecciones.filter(function (inf) {
+          if (inf.y && (inf.y < y0 || inf.y > y1)) return false;
+          if (infec && String(inf.inf) !== infec) return false;
+          if (orig && String(inf.orig) !== orig) return false;
+          if (!matchesMicroFilter(inf.ms, micro, grupo, gram, tipoGer)) return false;
+          if (!matchesAtb(inf.nhc, inf.f0, atb)) return false;
+          var p = inf._p;
+          if (apMin && (!p || p.ap == null || p.ap < apMin)) return false;
+          if (ex && (!p || String(p.ex) !== ex)) return false;
+          if (sx && (!p || String(p.sx) !== sx)) return false;
+          if (cov !== "" && (!p || String(p.cov) !== cov)) return false;
+          if (inmuno !== "" && (!p || String(p.im) !== inmuno)) return false;
+          if (q) {
+            var blob = [
+              inf.nhc, p && p.ini, nameInf(inf.inf), microsTxt(inf.ms), atbTxt(inf.nhc, inf.f0),
+              p && nameDx(p.dx), cat.origInf[inf.orig] || "", cat.mues[inf.mues] || ""
+            ].join(" ").toLowerCase();
+            if (blob.indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+      }
+
+      function filterIngresos(opts) {
+        opts = opts || {};
+        var q = val("q").trim().toLowerCase();
+        var y0 = Number(val("y0") || E.meta.periodo[0]);
+        var y1 = Number(val("y1") || E.meta.periodo[1]);
+        var infec = val("infec");
+        var micro = opts.skipMicro ? "" : val("micro");
+        var tipoGer = val("tipoGer");
+        var grupo = val("grupo");
+        var gram = val("gram");
+        var orig = val("orig");
+        var atb = val("atb");
+        var apMin = Number(val("apache") || 0);
+        var ex = val("exitus");
+        var sx = val("sexo");
+        var cov = val("covid");
+        var inmuno = val("inmuno");
+        var needInf = !!(infec || micro || tipoGer || grupo || gram || orig);
+        return E.ingresos.filter(function (p) {
+          if (!needInf && p.y && (p.y < y0 || p.y > y1)) return false;
+          if (apMin && (p.ap == null || p.ap < apMin)) return false;
+          if (ex && String(p.ex) !== ex) return false;
+          if (sx && String(p.sx) !== sx) return false;
+          if (cov !== "" && String(p.cov) !== cov) return false;
+          if (inmuno !== "" && String(p.im) !== inmuno) return false;
+          if (!matchesAtb(p.nhc, p.f0, atb)) return false;
+          if (needInf) {
+            var infs = infByStay[stayKey(p.nhc, p.f0)] || [];
+            var ok = infs.some(function (inf) {
+              if (inf.y && (inf.y < y0 || inf.y > y1)) return false;
+              if (infec && String(inf.inf) !== infec) return false;
+              if (orig && String(inf.orig) !== orig) return false;
+              return matchesMicroFilter(inf.ms, micro, grupo, gram, tipoGer);
+            });
+            if (!ok) return false;
+          }
+          if (q) {
+            var blob = [p.nhc, p.ini, nameDx(p.dx), atbTxt(p.nhc, p.f0)].join(" ").toLowerCase();
+            if (blob.indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+      }
+
+      function uniqueStays(infs) {
+        var s = {};
+        infs.forEach(function (i) { s[stayKey(i.nhc, i.f0)] = true; });
+        return Object.keys(s);
+      }
+
+      function bars(el, items, maxN, picked) {
+        el.innerHTML = items.map(function (it) {
+          var w = maxN ? Math.max(4, (it.n / maxN) * 100) : 0;
+          var micro = it.k ? String(it.k) : "";
+          var cls = "bar-row" + (micro && picked && micro === picked ? " picked" : "");
+          var extra = micro
+            ? ' data-micro="' + encodeURIComponent(micro) + '" role="button" tabindex="0"'
+            : "";
+          return '<div class="' + cls + '"' + extra + '><div class="bar-lab" title="' + it.t.replace(/"/g, "") + '">' + it.t +
+            '</div><div class="bar-track"><div class="bar-fill" style="width:' + w + '%"></div></div>' +
+            '<div class="bar-n">' + it.n + "</div></div>";
+        }).join("");
+      }
+
+      function tagOrig(o) {
+        if (o === 2) return '<span class="tag uci">UCI</span>';
+        if (o === 1) return '<span class="tag com">Comunitaria</span>';
+        if (o === 3) return '<span class="tag ext">Extra-UCI</span>';
+        return o ? String(o) : "—";
+      }
+      function tagEx(ex) {
+        if (ex === 1) return '<span class="tag dead">Exitus</span>';
+        if (ex === 2) return '<span class="tag alive">Vivo</span>';
+        return "—";
+      }
+
+      function renderTable(rows) {
+        var thead = document.getElementById("thead");
+        var tbody = document.getElementById("tbody");
+        currentRows = rows;
+        var start = page * pageSize;
+        var slice = rows.slice(start, start + pageSize);
+        if (view === "inf") {
+          thead.innerHTML = "<tr><th>Fecha</th><th>NHC</th><th>Paciente</th><th>Infección</th><th>Microorganismos</th><th>Tratamientos</th><th>Origen</th><th>APACHE</th><th>Alta</th><th></th></tr>";
+          tbody.innerHTML = slice.map(function (inf, idx) {
+            var p = inf._p || {};
+            return "<tr data-kind='inf' data-i='" + (start + idx) + "'>" +
+              "<td>" + (inf.fi || inf.f0 || "—") + "</td>" +
+              "<td>" + inf.nhc + "</td>" +
+              "<td>" + (p.ini || "—") + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + (p.sx === 1 ? " · H" : p.sx === 2 ? " · M" : "") + "</div></td>" +
+              "<td>" + nameInf(inf.inf) + "</td>" +
+              "<td>" + microsTxt(inf.ms) + "</td>" +
+              "<td class='tto'>" + atbTxt(inf.nhc, inf.f0) + "</td>" +
+              "<td>" + tagOrig(inf.orig) + "</td>" +
+              "<td>" + (p.ap != null ? p.ap : "—") + "</td>" +
+              "<td>" + tagEx(p.ex) + "</td>" +
+              "<td><button class='btn' type='button' data-i='" + (start + idx) + "'>Ficha</button></td></tr>";
+          }).join("");
+        } else {
+          thead.innerHTML = "<tr><th>Ingreso</th><th>NHC</th><th>Paciente</th><th>Diagnóstico</th><th>Tratamientos</th><th>APACHE / SAPS</th><th>VM</th><th>COVID</th><th>Inmunod.</th><th>Alta</th><th></th></tr>";
+          tbody.innerHTML = slice.map(function (p, idx) {
+            return "<tr data-kind='ing' data-i='" + (start + idx) + "'>" +
+              "<td>" + (p.f0 || "—") + (p.f1 ? "<div class='muted'>alta " + p.f1 + "</div>" : "") + "</td>" +
+              "<td>" + p.nhc + "</td>" +
+              "<td>" + (p.ini || "—") + "<div class='muted'>" + (p.ed != null ? p.ed + " años" : "") + "</div></td>" +
+              "<td>" + nameDx(p.dx) + "</td>" +
+              "<td class='tto'>" + atbTxt(p.nhc, p.f0) + "</td>" +
+              "<td>" + (p.ap != null ? p.ap : "—") + " / " + (p.sa != null ? p.sa : "—") + "</td>" +
+              "<td>" + (p.vm === 1 ? "Sí" : p.vm === 0 ? "No" : "—") + "</td>" +
+              "<td>" + (p.cov === 1 ? "Sí" : "No") + "</td>" +
+              "<td>" + (p.im === 1 ? "Sí" : p.im === 0 ? "No" : "—") + "</td>" +
+              "<td>" + tagEx(p.ex) + "</td>" +
+              "<td><button class='btn' type='button' data-i='" + (start + idx) + "'>Ficha</button></td></tr>";
+          }).join("");
+        }
+        document.getElementById("page-info").textContent =
+          (rows.length ? (start + 1) : 0) + "–" + Math.min(start + pageSize, rows.length) + " de " + rows.length;
+        document.getElementById("table-title").textContent = view === "inf" ? "Infecciones filtradas" : "Ingresos filtrados";
+      }
+
+      function apply() {
+        var rows, stays, mortN = 0, mortD = 0, apSum = 0, apN = 0;
+        var byYear = {}, byMicro = {}, byAtb = {};
+        function countAtbStay(k) {
+          (atbByStay[k] || []).forEach(function (a) {
+            if (a.atb == null) return;
+            byAtb[a.atb] = (byAtb[a.atb] || 0) + 1;
+          });
+        }
+        function countMicros(ms, skipName) {
+          var tipoGer = val("tipoGer");
+          var grupo = val("grupo");
+          var gram = val("gram");
+          var qMicro = skipName ? "" : val("micro");
+          (ms || []).forEach(function (x) {
+            if (x.m === 0) return;
+            if (!matchesMicroFilter([x], qMicro, grupo, gram, tipoGer)) return;
+            byMicro[x.m] = (byMicro[x.m] || 0) + 1;
+          });
+        }
+        if (view === "inf") {
+          rows = filterInfecciones();
+          rows.sort(function (a, b) { return String(b.fi || b.f0 || "").localeCompare(String(a.fi || a.f0 || "")); });
+          stays = uniqueStays(rows);
+          stays.forEach(function (k) {
+            var p = ingresosByStay[k];
+            if (!p) return;
+            if (p.ex === 1 || p.ex === 2) { mortD++; if (p.ex === 1) mortN++; }
+            if (p.ap != null) { apSum += p.ap; apN++; }
+            countAtbStay(k);
+          });
+          rows.forEach(function (inf) {
+            var yy = inf.y || "s/a";
+            byYear[yy] = (byYear[yy] || 0) + 1;
+          });
+          var rankInf = val("micro") ? filterInfecciones({ skipMicro: true }) : rows;
+          rankInf.forEach(function (inf) { countMicros(inf.ms, true); });
+          document.getElementById("k-n").textContent = rows.length;
+          document.getElementById("k-n-l").textContent = "Infecciones";
+          document.getElementById("chart-year-title").textContent = "Infecciones por año (filtro actual)";
+        } else {
+          rows = filterIngresos();
+          rows.sort(function (a, b) { return String(b.f0 || "").localeCompare(String(a.f0 || "")); });
+          stays = rows.map(function (p) { return stayKey(p.nhc, p.f0); });
+          rows.forEach(function (p) {
+            if (p.ex === 1 || p.ex === 2) { mortD++; if (p.ex === 1) mortN++; }
+            if (p.ap != null) { apSum += p.ap; apN++; }
+            var yy = p.y || "s/a";
+            byYear[yy] = (byYear[yy] || 0) + 1;
+            countAtbStay(stayKey(p.nhc, p.f0));
+          });
+          var rankIng = val("micro") ? filterIngresos({ skipMicro: true }) : rows;
+          var staySet = {};
+          rankIng.forEach(function (p) { staySet[stayKey(p.nhc, p.f0)] = true; });
+          E.infecciones.forEach(function (inf) {
+            if (!staySet[stayKey(inf.nhc, inf.f0)]) return;
+            countMicros(inf.ms, true);
+          });
+          document.getElementById("k-n").textContent = rows.length;
+          document.getElementById("k-n-l").textContent = "Ingresos";
+          document.getElementById("chart-year-title").textContent = "Ingresos por año (filtro actual)";
+        }
+
+        document.getElementById("k-ing").textContent = stays.length;
+        document.getElementById("k-mort").textContent = mortD ? (100 * mortN / mortD).toFixed(1) + "%" : "—";
+        document.getElementById("k-ap").textContent = apN ? (apSum / apN).toFixed(1) : "—";
+        var top = Object.keys(byMicro).sort(function (a, b) { return byMicro[b] - byMicro[a]; });
+        document.getElementById("k-top").textContent = top.length ? byMicro[top[0]] : "—";
+        document.getElementById("k-top-l").textContent = top.length ? nameMicro(top[0]) : "Germen más frecuente";
+
+        var yearItems = years.map(function (y) { return { t: String(y), n: byYear[y] || 0 }; }).filter(function (x) { return x.n; });
+        var maxY = yearItems.reduce(function (m, x) { return Math.max(m, x.n); }, 0);
+        bars(document.getElementById("chart-year"), yearItems, maxY);
+        var picked = val("micro");
+        var pick = document.getElementById("pick-micro");
+        pick.innerHTML = '<option value="">Todos en este ranking</option>';
+        top.forEach(function (k) {
+          var nom = nameMicro(k);
+          var op = document.createElement("option");
+          op.value = nom;
+          op.textContent = nom + " (" + byMicro[k] + ")";
+          pick.appendChild(op);
+        });
+        pick.value = picked;
+        if (picked && pick.value !== picked) {
+          var extra = document.createElement("option");
+          extra.value = picked;
+          extra.textContent = picked;
+          pick.appendChild(extra);
+          pick.value = picked;
+        }
+        var microItems = top.slice(0, 15).map(function (k) { return { t: nameMicro(k), n: byMicro[k], k: nameMicro(k) }; });
+        var maxM = microItems.reduce(function (m, x) { return Math.max(m, x.n); }, 0);
+        bars(document.getElementById("chart-micro"), microItems, maxM, picked);
+        var topAtb = Object.keys(byAtb).sort(function (a, b) { return byAtb[b] - byAtb[a]; });
+        var atbItems = topAtb.slice(0, 12).map(function (k) { return { t: nameAtb(k), n: byAtb[k] }; });
+        var maxA = atbItems.reduce(function (m, x) { return Math.max(m, x.n); }, 0);
+        bars(document.getElementById("chart-atb"), atbItems, maxA);
+        if (page * pageSize >= rows.length) page = 0;
+        renderTable(rows);
+      }
+
+      function openStay(p, infFocus) {
+        if (!p) return;
+        var k = stayKey(p.nhc, p.f0);
+        var infs = infByStay[k] || [];
+        var atbs = atbByStay[k] || [];
+        var html = "<h3>" + (p.ini || "Paciente") + " · NHC " + p.nhc + "</h3>" +
+          "<p class='muted'>Ingreso UCI " + (p.f0 || "—") + (p.f1 ? " → alta " + p.f1 : "") + " · " + tagEx(p.ex) + "</p>" +
+          "<div class='kv'>" +
+          "<b>Edad / sexo</b><span>" + (p.ed != null ? p.ed : "—") + " años · " + (cat.sexo[p.sx] || "—") + "</span>" +
+          "<b>Diagnóstico</b><span>" + nameDx(p.dx) + "</span>" +
+          "<b>APACHE / SAPS2</b><span>" + (p.ap != null ? p.ap : "—") + " / " + (p.sa != null ? p.sa : "—") + "</span>" +
+          "<b>Origen / tipo</b><span>" + (cat.origenPac[p.or] || "—") + " · " + (cat.tipoIng[p.ad] || "—") + "</span>" +
+          "<b>Dispositivos</b><span>VM " + (p.vm === 1 ? "sí" : "no") + " · CVC " + (p.cvc === 1 ? "sí" : "no") + " · Sonda " + (p.su === 1 ? "sí" : "no") + "</span>" +
+          "<b>Comorbilidad</b><span>" +
+            (p.cov === 1 ? "COVID · " : "") +
+            (p.dm === 1 ? "DM · " : "") +
+            (p.epoc === 1 ? "EPOC · " : "") +
+            (p.cir === 1 ? "Cirrosis · " : "") +
+            (p.neo === 1 ? "Neoplasia · " : "") +
+            (p.ir === 1 ? "Insuf. renal · " : "") +
+            (p.im === 1 ? "Inmunosupresión" : "") +
+          "</span></div>";
+        html += "<h2 style='font-size:0.95rem;color:var(--az)'>Infecciones (" + infs.length + ")</h2>";
+        if (!infs.length) html += "<p class='muted'>Sin infecciones registradas en este ingreso.</p>";
+        infs.forEach(function (inf) {
+          var hl = infFocus && inf.fi === infFocus.fi && inf.inf === infFocus.inf;
+          html += "<div class='panel' style='margin:8px 0;" + (hl ? "border-color:var(--az);" : "") + "'>" +
+            "<b>" + (inf.fi || "") + " · " + nameInf(inf.inf) + "</b> " + tagOrig(inf.orig) +
+            "<div class='muted'>" + (cat.mues[inf.mues] || "Muestra no codificada") + "</div>" +
+            "<ul class='micro-list'>" + (inf.ms && inf.ms.length ? inf.ms.map(function (x) {
+              var g = cat.micro[x.m];
+              return "<li>" + nameMicro(x.m) + (g && g.gram ? " · " + (cat.gram[g.gram] || g.gram) : "") + "</li>";
+            }).join("") : "<li>Sin aislamiento</li>") + "</ul></div>";
+        });
+        html += "<h2 style='font-size:0.95rem;color:var(--az)'>Antibióticos (" + atbs.length + ")</h2>";
+        if (!atbs.length) html += "<p class='muted'>Sin tratamientos en la tabla ATB.</p>";
+        else {
+          html += "<ul class='micro-list'>" + atbs.map(function (a) {
+            return "<li>" + nameAtb(a.atb) + " · " + (a.i || "?") + " → " + (a.f || "?") +
+              (a.ind ? " · " + (cat.indicAtb[a.ind] || "") : "") + "</li>";
+          }).join("") + "</ul>";
+        }
+        html += "<p class='muted'>Clic fuera para cerrar.</p>";
+        document.getElementById("drawer").innerHTML = html;
+        document.getElementById("drawer-bg").classList.add("open");
+      }
+
+      document.getElementById("tbody").addEventListener("click", function (ev) {
+        var tr = ev.target.closest("tr");
+        if (!tr) return;
+        var i = Number(tr.dataset.i);
+        var row = currentRows[i];
+        if (!row) return;
+        if (view === "inf") openStay(row._p, row);
+        else openStay(row, null);
+      });
+      document.getElementById("drawer-bg").addEventListener("click", function (ev) {
+        if (ev.target.id === "drawer-bg") ev.currentTarget.classList.remove("open");
+      });
+
+      document.getElementById("pick-micro").addEventListener("change", function () {
+        document.getElementById("micro").value = this.value;
+        page = 0;
+        apply();
+      });
+      document.getElementById("chart-micro").addEventListener("click", function (ev) {
+        var row = ev.target.closest("[data-micro]");
+        if (!row) return;
+        var name = decodeURIComponent(row.getAttribute("data-micro") || "");
+        var el = document.getElementById("micro");
+        el.value = el.value === name ? "" : name;
+        page = 0;
+        apply();
+      });
+      ["q","y0","y1","infec","micro","tipoGer","atb","grupo","gram","orig","apache","exitus","sexo","covid","inmuno"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", function () { page = 0; apply(); });
+        document.getElementById(id).addEventListener("change", function () {
+          if (id === "tipoGer") fillMicroDl();
+          page = 0; apply();
+        });
+      });
+      document.getElementById("btn-reset").addEventListener("click", function () {
+        ["q","infec","micro","tipoGer","atb","grupo","gram","orig","apache","exitus","sexo","covid","inmuno"].forEach(function (id) { document.getElementById(id).value = ""; });
+        fillMicroDl();
+        document.getElementById("y0").value = String(E.meta.periodo[0]);
+        document.getElementById("y1").value = String(E.meta.periodo[1]);
+        document.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+        page = 0; apply();
+      });
+      document.getElementById("prev").addEventListener("click", function () { if (page > 0) { page--; renderTable(currentRows); } });
+      document.getElementById("next").addEventListener("click", function () {
+        if ((page + 1) * pageSize < currentRows.length) { page++; renderTable(currentRows); }
+      });
+      document.querySelectorAll(".tab").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".tab").forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          view = btn.dataset.view; page = 0; apply();
+        });
+      });
+      document.getElementById("btn-csv").addEventListener("click", function () {
+        var lines;
+        if (view === "inf") {
+          lines = [["fecha","nhc","iniciales","edad","infeccion","microorganismos","tratamientos","origen","apache","inmunodeprimido","exitus"].join(";")].concat(
+            currentRows.map(function (inf) {
+              var p = inf._p || {};
+              return [inf.fi || "", inf.nhc, p.ini || "", p.ed || "", nameInf(inf.inf), microsTxt(inf.ms), atbTxt(inf.nhc, inf.f0), cat.origInf[inf.orig] || "", p.ap || "", p.im === 1 ? "si" : p.im === 0 ? "no" : "", cat.exitus[p.ex] || ""].join(";");
+            })
+          );
+        } else {
+          lines = [["ingreso","alta","nhc","iniciales","edad","diagnostico","tratamientos","apache","saps","vm","covid","inmunodeprimido","exitus"].join(";")].concat(
+            currentRows.map(function (p) {
+              return [p.f0 || "", p.f1 || "", p.nhc, p.ini || "", p.ed || "", nameDx(p.dx), atbTxt(p.nhc, p.f0), p.ap || "", p.sa || "", p.vm === 1 ? "si" : "no", p.cov === 1 ? "si" : "no", p.im === 1 ? "si" : p.im === 0 ? "no" : "", cat.exitus[p.ex] || ""].join(";");
+            })
+          );
+        }
+        var blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = view === "inf" ? "envin-infecciones.csv" : "envin-ingresos.csv";
+        a.click();
+      });
+
+      apply();
+    })();
+  </script>
+</body>
+</html>
